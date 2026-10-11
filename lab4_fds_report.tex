@@ -1,0 +1,170 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[margin=2.2cm]{geometry}
+\usepackage{longtable}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{titlesec}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.5em}
+\setlist[itemize]{itemsep=2pt, topsep=2pt}
+\titleformat{\section}{\Large\bfseries}{\thesection.}{0.5em}{}
+\titleformat{\subsection}{\large\bfseries}{\thesubsection}{0.5em}{}
+
+\newcommand{\fd}{\ensuremath{\rightarrow}}
+\newcommand{\rel}[1]{\textbf{#1}}
+\renewcommand{\arraystretch}{1.25}
+
+% 3-column table for FDs
+\newcolumntype{R}{>{\raggedright\arraybackslash}p{2.9cm}}
+\newcolumntype{F}{>{\raggedright\arraybackslash}p{5.6cm}}
+\newcolumntype{J}{>{\raggedright\arraybackslash}p{7.2cm}}
+
+\begin{document}
+
+% ---------- Title ----------
+\begin{center}
+  {\Huge\bfseries Lab 4: Functional Dependencies}\\[0.6em]
+  {\Large Research Lab Management System (RLMS)}\\[0.6em]
+  Data Management $\cdot$ Fall 2026 $\cdot$ UM6P -- College of Computing\\
+  Professor: Karima Echihabi $\cdot$ Program: Computer Engineering\\
+  Group: [Group name / number]
+\end{center}
+\hrule
+\vspace{1em}
+
+% ---------- 1. Team ----------
+\section{Team Members and Contributions}
+
+\begin{tabular}{@{}p{4cm}p{11.5cm}@{}}
+\toprule
+\textbf{Member} & \textbf{Responsibility}\\
+\midrule
+Ahmad KHRISS& FDs of People; coordination and final report\\
+Souhayl MOUJAHID& FDs of Laboratories, Projects, Budgets\\
+Adam NAJI& FDs of Equipment, Certifications, Reservations, Maintenance, Calibration\\
+Ilyas Youssef MOUHRI& FDs of Consumables, Suppliers, Stock; conditional FDs and assumptions\\
+\bottomrule
+\end{tabular}
+
+
+
+% ---------- 2. FDs ----------
+\section{Functional Dependencies of the RLMS Schema}
+
+The FDs are derived from the relational schema of Lab~2 (itself mapped from the ER diagram of Lab~1). In every relation, the primary key determines all other attributes. Notation: $X \fd Y$ means that the value of $X$ determines the value of $Y$.
+
+\subsection{People}
+\begin{longtable}{R F J}
+\toprule
+\textbf{Relation} & \textbf{Functional dependency} & \textbf{Justification}\\
+\midrule
+\endhead
+\rel{Person} & pid \fd{} firstName, lastName, email, affiliation, startDate, endDate & pid is the primary key. A person has one name, one email, one affiliation and one start/end date.\\
+\rel{Student} & pid \fd{} program & pid is the primary key (and a foreign key to Person). A student is enrolled in one program (BSc, BEng, MSc or PhD).\\
+\rel{Employee} & pid \fd{} phone, office, supervisorPid & pid is the primary key. ReportsTo was absorbed into Employee: only the current supervisor is kept (PE5), so each employee has at most one supervisorPid (NULL for the Dean).\\
+\rel{Faculty, Administrative, Technical} & pid \fd{} position & pid is the primary key of each subclass. A staff member has one position.\\
+\bottomrule
+\end{longtable}
+
+\subsection{Laboratories, Projects and Budgets}
+\begin{longtable}{R F J}
+\toprule
+\textbf{Relation} & \textbf{Functional dependency} & \textbf{Justification}\\
+\midrule
+\endhead
+\rel{Laboratory} & labId \fd{} name, building, roomNumber, discipline, supervisorPid & labId is the primary key. Supervises was absorbed: every laboratory has exactly one Faculty supervisor.\\
+\rel{ResearchProject} & code \fd{} title, startDate, endDate, status & code is the primary key. A project has one title, one period and one status.\\
+\rel{Participates} & (pid, projectCode) \fd{} role & role is an attribute of the pair: a person has exactly one role in a given project (PR3--PR4). pid alone does not determine role, since a person may have different roles in different projects.\\
+\rel{Budget} & budgetLine \fd{} amountGranted, amountDisbursed, startDate, endDate, managerPid & budgetLine is the primary key. Manages was absorbed: every budget is managed by exactly one Academic.\\
+\bottomrule
+\end{longtable}
+
+\subsection{Equipment, Certifications and Reservations}
+\begin{longtable}{R F J}
+\toprule
+\textbf{Relation} & \textbf{Functional dependency} & \textbf{Justification}\\
+\midrule
+\endhead
+\rel{EquipmentModel} & modelId \fd{} commercialName, manufacturer, category, requiredEnvironment, trainingMandatory & modelId is the primary key. These are properties of the model, shared by all its units.\\
+\rel{EquipmentUnit} & serialNo \fd{} acquisitionDate, purchaseCost, status, portable, modelId, labId & serialNo is the primary key. InstanceOf and LocatedIn were absorbed: a unit has exactly one model and is currently in exactly one laboratory.\\
+\rel{Certification} & code \fd{} title, issuingAuthority, validityPeriod, safetyLevel & code is the primary key.\\
+\rel{Holds} & (pid, certCode) \fd{} issueDate, expirationDate, grade & One instance per (person, certification): only the latest award is kept (CE3--CE4). Dates and grade describe that award.\\
+\rel{Reservation} & resId \fd{} submissionTS, plannedStart, plannedEnd, purpose, status, madeByPid, projectCode, approverPid & resId is the primary key. MadeBy and For were absorbed (exactly one person and one project). Approves was absorbed with a nullable approverPid (at most one approver).\\
+\bottomrule
+\end{longtable}
+
+\subsection{Maintenance and Calibration (weak entities)}
+\begin{longtable}{R F J}
+\toprule
+\textbf{Relation} & \textbf{Functional dependency} & \textbf{Justification}\\
+\midrule
+\endhead
+\rel{Maintenance} & (serialNo, startTS) \fd{} endTS, type, description, cost, outcome, technicalPid & The key is the owner's key plus the partial key startTS. DoneBy was absorbed: each maintenance is done by exactly one Technical staff member.\\
+\rel{CalibrationRecord} & (serialNo, calibDate) \fd{} calibrationType, result, nextDueDate, remarks & The key is the owner's key plus the partial key calibDate.\\
+\bottomrule
+\end{longtable}
+
+\subsection{Consumables, Suppliers and Stock}
+\begin{longtable}{R F J}
+\toprule
+\textbf{Relation} & \textbf{Functional dependency} & \textbf{Justification}\\
+\midrule
+\endhead
+\rel{Consumable} & consId \fd{} name, unitOfMeasure, hazardLevel, reorderThreshold & consId is the primary key.\\
+\rel{Supplier} & suppId \fd{} name, contactEmail, phone & suppId is the primary key.\\
+\rel{Supplies} & (suppId, consId, labId) \fd{} unitPrice & Ternary relationship: unitPrice depends on the exact Supplier--Consumable--Laboratory triple (CO4). No proper subset of the triple determines it.\\
+\rel{Stocks} & (labId, consId) \fd{} quantityOnHand, lastRestockDate, storageCondition, technicalPid, monitoringSince & A stock occurrence is identified by (labId, consId). Monitors (on the aggregation of Stocks) has exactly one Technical monitor per stock, so technicalPid and monitoringSince are stored here (CO8).\\
+\rel{Consumes} & (resId, labId, consId) \fd{} quantityUsed & quantityUsed depends on the reservation and on the specific laboratory stock the quantity is taken from (CO9--CO10).\\
+\bottomrule
+\end{longtable}
+
+\subsection{Relations with only trivial FDs}
+The following relations have all their attributes in the primary key, so they have no non-trivial FD: Academic, NonAcademic, Advises, Attached, Requires, FundsPrj, FundsLab, Reserves.
+
+\subsection{Conditional FDs}
+The Lab~2 schema declares no \texttt{UNIQUE} clause, so the FDs below are \textbf{not guaranteed by the schema}. They hold only if the stated assumption is true.
+
+\begin{longtable}{R F J}
+\toprule
+\textbf{Relation} & \textbf{Possible FD} & \textbf{Assumption required}\\
+\midrule
+\endhead
+\rel{Person} & email \fd{} pid (hence email \fd{} all Person attributes) & Email is unique per person.\\
+\rel{Supplier} & contactEmail \fd{} suppId & The contact email is unique per supplier.\\
+\rel{EquipmentModel} & (commercialName, manufacturer) \fd{} modelId & A model is identified by its commercial name and manufacturer.\\
+\rel{Laboratory} & (building, roomNumber) \fd{} labId & A room hosts only one laboratory.\\
+\rel{Holds} & (certCode, issueDate) \fd{} expirationDate & expirationDate = issueDate + validityPeriod (from Certification).\\
+\bottomrule
+\end{longtable}
+
+% ---------- 3. Challenges ----------
+\section{Key Challenges and Resolutions}
+\begin{itemize}
+  \item Rules that are not FDs (no self-reporting, reservation before use, certified users only) are left to triggers or CHECKs, as in Lab~2.
+  \item \texttt{unitPrice} depends on the full (supplier, consumable, laboratory) triple, and a supply may exist without stock, so Supplies and Stocks stay separate.
+  \item The relationnal schema declares no \texttt{UNIQUE} clause, so FDs such as email \fd{} pid are listed as conditional.
+\end{itemize}
+
+% ---------- 4. Conversion choices ----------
+\section{Justification of Conversion Choices}
+\begin{itemize}
+  \item ISA: one relation per class; each subclass key is also a foreign key to its parent.
+  \item Weak entities: owner key + partial key, with \texttt{ON DELETE CASCADE}.
+  \item Monitors is stored in Stocks (exactly one monitor per stock); Consumes references \texttt{Stocks(labId, consId)} to keep the supplying laboratory.
+\end{itemize}
+
+% ---------- 5. Assumptions ----------
+\section{Assumptions}
+\begin{itemize}
+  \item Only the current supervisor, location and latest certification award are kept.
+  \item The person with the highest authority has a NULL \texttt{supervisorPid}; a NULL \texttt{approverPid} means no approval is needed.
+\end{itemize}
+
+\end{document}
